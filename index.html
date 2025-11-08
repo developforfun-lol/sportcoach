@@ -106,7 +106,20 @@
 </div>
 </section>
 </main>
-<footer id="ver">v6.0.1</footer>
+
+<!-- Non-blocking custom label modal -->
+<div id="markModal" class="modal hidden">
+  <div class="modal-card">
+    <h3>Add Mark</h3>
+    <input id="markInput" maxlength="24" placeholder="Label (max 24)">
+    <div class="modal-actions">
+      <button id="markCancel">Cancel</button>
+      <button id="markOK">Add</button>
+    </div>
+  </div>
+</div>
+
+<footer id="ver">v6.0.2</footer>
 <script src="app.js"></script>
 </body>
 </html>

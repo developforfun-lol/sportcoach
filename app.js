@@ -23,7 +23,7 @@ document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=f
 document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 function nowGameMs(){return accum+(tRunning?(performance.now()-startTime):0)}
 
-let db;const req=indexedDB.open('sportcoach',13)
+let db;const req=indexedDB.open('sportcoach',14)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result;refreshLibrary()}
 
@@ -37,7 +37,7 @@ const recStatus=document.getElementById('recStatus')
 
 async function listCams(){const ds=await navigator.mediaDevices.enumerateDevices();const vids=ds.filter(d=>d.kind==='videoinput');cameraSel.innerHTML='';vids.forEach((d,i)=>{const o=document.createElement('option');o.value=d.deviceId;o.textContent=d.label||('Camera '+(i+1));cameraSel.appendChild(o)})}
 function setAspectFromPreview(){if(!preview.videoWidth||!preview.videoHeight)return;previewWrap.style.aspectRatio=preview.videoWidth+' / '+preview.videoHeight}
-async function startPreview(){const res=resSel.value.split('x').map(Number);const c={video:{width:{ideal:res[0]},height:{ideal:res[1]},facingMode:'environment'},audio:true};if(cameraSel.value)c.video.deviceId={exact:cameraSel.value};stream=await navigator.mediaDevices.getUserMedia(c);preview.srcObject=stream;preview.onloadedmetadata=()=>{setAspectFromPreview()}}
+async function startPreview(){const res=resSel.value.split('x').map(Number);const c={video:{width:{ideal:res[0]},height:{ideal:res[1]},facingMode:'environment'},audio:true};if(cameraSel.value)c.video.deviceId={exact:cameraSel.value};stream=await navigator.mediaDevices.getUserMedia(c);preview.srcObject=stream;preview.onloadedmetadata=()=>{setAspectFromPreview();preview.play?.()}}
 function pickType(){const types=['video/mp4;codecs=h264','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];for(const t of types){if(MediaRecorder.isTypeSupported(t)){return t}}return ''}
 
 async function startRec(){
@@ -68,7 +68,14 @@ document.getElementById('mkGoal').onclick=()=>addMarker('Goal')
 document.getElementById('mkFoul').onclick=()=>addMarker('Foul')
 document.getElementById('mkSub').onclick=()=>addMarker('Sub')
 document.getElementById('mkShot').onclick=()=>addMarker('Shot')
-document.getElementById('mkCustom').onclick=()=>{const n=prompt('Label');if(n){addMarker(n.slice(0,24))}}
+
+// Non-blocking custom mark modal (avoid window.prompt freeze on mobile)
+const modal=document.getElementById('markModal')
+const markInput=document.getElementById('markInput')
+document.getElementById('mkCustom').onclick=()=>{markInput.value='';modal.classList.remove('hidden');markInput.focus()}
+document.getElementById('markCancel').onclick=()=>{modal.classList.add('hidden')}
+document.getElementById('markOK').onclick=()=>{const v=markInput.value.trim();if(v){addMarker(v.slice(0,24))}modal.classList.add('hidden')}
+markInput.addEventListener('keydown',e=>{if(e.key==='Enter'){document.getElementById('markOK').click()}})
 
 async function saveBlob(){
   const blob=new Blob(chunks,{type:currentMime||'video/webm'})
@@ -187,7 +194,15 @@ document.getElementById('fsBtn').onclick=()=>{const el=document.getElementById('
 async function confirmDelete(id){const ok=window.confirm('Delete this video permanently?');if(!ok)return;await deleteVideo(id)}
 async function deleteVideo(id){
   await new Promise((resolve)=>{const tx=db.transaction('videos','readwrite');const store=tx.objectStore('videos');store.delete(id).onsuccess=()=>resolve()})
-  const cache=await caches.open('blobs');await cache.delete('./blob/'+id);refreshLibrary()
+  const cache=await caches.open('blobs');await cache.delete('./blob/'+id)
+  if(currentId===id){
+    try{player.pause()}catch(e){}
+    if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=null}
+    player.removeAttribute('src');player.load();
+    markerBar.innerHTML='';currentId=null;currentMeta=null;
+    document.getElementById('playToggle').textContent='Play'
+  }
+  refreshLibrary()
 }
 
 document.getElementById('freeSpace').onclick=async()=>{
