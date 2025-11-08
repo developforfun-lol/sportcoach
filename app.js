@@ -30,7 +30,7 @@ document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=f
 document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 function nowGameMs(){return accum+(tRunning?(performance.now()-startTime):0)}
 
-let db;const req=indexedDB.open('sportcoach',18)
+let db;const req=indexedDB.open('sportcoach',19)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result;refreshLibrary()}
 
@@ -57,7 +57,6 @@ async function startRec(){
   if(!stream)await startPreview();
   currentMime=pickType();chunks=[];currentRecordingMarkers=[];currentRecordingScoreEvents=[];recStartPerf=performance.now();
   recBaseGameMs=nowGameMs();
-  // seed initial score snapshot
   currentRecordingScoreEvents.push({recMs:0,gameMs:recBaseGameMs,a:scoreA,b:scoreB});
   recorder=new MediaRecorder(stream,{mimeType:currentMime||undefined});
   recorder.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data)};
@@ -74,17 +73,28 @@ async function stopRec(){
   document.getElementById('stopRec').disabled=true;
   recStatus.textContent='Idle';
 }
-function addMarker(label){
+function addMarkerWithSnapshot(label){
   if(!recStartPerf){recStatus.textContent='Not recording';return}
   const recMs=performance.now()-recStartPerf;
-  currentRecordingMarkers.push({id:crypto.randomUUID(),label,gameMs:nowGameMs(),recMs,createdAt:Date.now()});
+  const snapshot={a:scoreA,b:scoreB}
+  currentRecordingMarkers.push({id:crypto.randomUUID(),label,gameMs:nowGameMs(),recMs,score:snapshot,createdAt:Date.now()});
   recStatus.textContent='Marked: '+label+' @ '+fmtS(Math.floor(recMs/1000));
+  // also ensure we have a score event at this exact time
+  currentRecordingScoreEvents.push({recMs,gameMs:nowGameMs(),a:scoreA,b:scoreB});
 }
-document.getElementById('mkGoal').onclick=()=>addMarker('Goal')
+function addMarker(label){ addMarkerWithSnapshot(label) }
+
 document.getElementById('mkFoul').onclick=()=>addMarker('Foul')
 document.getElementById('mkSub').onclick=()=>addMarker('Sub')
 document.getElementById('mkShot').onclick=()=>addMarker('Shot')
 
+// quick Goal: also bumps the selected team's score and records snapshot
+let scoringFor='A';
+const scoringBtn=document.getElementById('scoringTeam')
+scoringBtn.onclick=()=>{scoringFor = (scoringFor==='A'?'B':'A');scoringBtn.textContent='Scoring: '+scoringFor}
+document.getElementById('mkGoal').onclick=()=>{bumpScore(scoringFor,+1);addMarker('Goal')}
+
+// custom modal
 const modal=document.getElementById('markModal')
 const markInput=document.getElementById('markInput')
 function openModal(){document.body.classList.add('modal-open');modal.classList.remove('hidden');setTimeout(()=>markInput.focus(),0)}
@@ -166,7 +176,8 @@ function renderMarkers(){
   if(!currentMeta||!currentMeta.markers||currentMeta.markers.length===0){markerBar.textContent='No markers';return}
   currentMeta.markers.forEach(m=>{
     const chip=document.createElement('button');chip.className='marker-chip';chip.textContent=m.label
-    const s=document.createElement('small');s.textContent=' rec '+fmtS(Math.floor(m.recMs/1000))+' | game '+fmtS(Math.floor(m.gameMs/1000))
+    const snap = m.score?` | ${m.score.a}:${m.score.b}`:'';
+    const s=document.createElement('small');s.textContent=' rec '+fmtS(Math.floor(m.recMs/1000))+' | game '+fmtS(Math.floor(m.gameMs/1000))+snap
     chip.appendChild(s);chip.onclick=()=>{player.currentTime=Math.max(0,m.recMs/1000-0.3)}
     markerBar.appendChild(chip)
   })
@@ -185,7 +196,7 @@ function recToGameMs(tMs){
 
 function scoreAtMs(tMs){
   const evs=(currentMeta?.scoreEvents||[]).slice().sort((a,b)=>a.recMs-b.recMs);
-  if(evs.length===0){return {a:scoreA,b:scoreB}} // fallback to current
+  if(evs.length===0){return {a:scoreA,b:scoreB}} 
   let cur=evs[0];
   for(const e of evs){ if(e.recMs<=tMs){cur=e}else{break} }
   return {a:cur.a,b:cur.b}
