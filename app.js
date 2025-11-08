@@ -18,7 +18,7 @@ document.getElementById('timerStart').onclick=()=>{if(tRunning)return;tRunning=t
 document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=false;cancelAnimationFrame(rafId);accum+=performance.now()-startTime}
 document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 let db
-const req=indexedDB.open('sportcoach',9)
+const req=indexedDB.open('sportcoach',10)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result}
 let stream,recorder,chunks=[],currentMime=null
@@ -40,11 +40,16 @@ navigator.mediaDevices.getUserMedia({video:true,audio:true}).then(()=>{listCams(
 cameraSel.onchange=()=>startPreview()
 resSel.onchange=()=>startPreview()
 const listEl=document.getElementById('videoList')
-async function refreshLibrary(){listEl.innerHTML='';const tx=db.transaction('videos','readonly');const r=tx.objectStore('videos').getAll();r.onsuccess=()=>{r.result.sort((a,b)=>b.createdAt-a.createdAt).forEach(v=>{const li=document.createElement('li');const left=document.createElement('div');left.textContent=new Date(v.createdAt).toLocaleString()+' • '+Math.round(v.size/1024/1024)+' MB';const right=document.createElement('div');const play=document.createElement('button');play.textContent='Load';play.onclick=()=>loadVideo(v.id);const del=document.createElement('button');del.textContent='Delete';del.onclick=()=>deleteVideo(v.id);right.appendChild(play);right.appendChild(del);li.appendChild(left);li.appendChild(right);listEl.appendChild(li)})}}
+async function refreshLibrary(){listEl.innerHTML='';const tx=db.transaction('videos','readonly');const r=tx.objectStore('videos').getAll();r.onsuccess=()=>{r.result.sort((a,b)=>b.createdAt-a.createdAt).forEach(v=>{const li=document.createElement('li');const left=document.createElement('div');left.textContent=new Date(v.createdAt).toLocaleString()+' • '+Math.round(v.size/1024/1024)+' MB';const right=document.createElement('div');const play=document.createElement('button');play.textContent='Load';play.onclick=()=>loadVideo(v.id);const del=document.createElement('button');del.textContent='Delete';del.onclick=()=>confirmDelete(v.id);right.appendChild(play);right.appendChild(del);li.appendChild(left);li.appendChild(right);listEl.appendChild(li)})}}
 document.getElementById('refreshLib').onclick=refreshLibrary
 async function getBlobUrl(id){const cache=await caches.open('blobs');const url='./blob/'+id;const r=await cache.match(url);if(!r)return null;const b=await r.blob();return URL.createObjectURL(b)}
-// track currently loaded video URL so we can revoke
+// track current video
 let currentId=null; let currentObjectUrl=null
+async function confirmDelete(id){
+  const ok = window.confirm('Delete this video permanently?');
+  if(!ok) return;
+  await deleteVideo(id);
+}
 async function deleteVideo(id){ // delete from IDB and CacheStorage and stop if playing
   await new Promise((resolve)=>{
     const tx=db.transaction('videos','readwrite');
@@ -61,6 +66,7 @@ async function deleteVideo(id){ // delete from IDB and CacheStorage and stop if 
     try{ player.pause(); }catch(e){}
     if(currentObjectUrl){ URL.revokeObjectURL(currentObjectUrl); currentObjectUrl=null; }
     player.removeAttribute('src'); player.load();
+    document.getElementById('playToggle').textContent='Play';
   }
   refreshLibrary();
 }
@@ -78,13 +84,17 @@ canvas.addEventListener('pointerup',()=>{drawing=false})
 document.getElementById('undo').onclick=()=>{paths.pop();redraw()}
 document.getElementById('clearBtn').onclick=()=>{paths=[];redraw()}
 document.getElementById('colorBtn').onclick=()=>{colorIdx=(colorIdx+1)%colors.length;document.getElementById('colorBtn').textContent='Color: '+(['Red','Yellow','Blue','Green'][colorIdx])}
-document.getElementById('playToggle').onclick=()=>{if(player.paused){player.play()}else{player.pause()}}
+// Play/Pause toggle with label sync
+const playBtn=document.getElementById('playToggle')
+playBtn.onclick=()=>{if(player.paused){player.play()}else{player.pause()}}
+player.addEventListener('play',()=>{playBtn.textContent='Pause'})
+player.addEventListener('pause',()=>{playBtn.textContent='Play'})
 document.getElementById('back5').onclick=()=>{player.currentTime=Math.max(0,player.currentTime-5)}
 document.getElementById('fwd5').onclick=()=>{player.currentTime=Math.min(player.duration||1,player.currentTime+5)}
 document.getElementById('speed').onclick=()=>{speedIdx=(speedIdx+1)%speeds.length;player.playbackRate=speeds[speedIdx];document.getElementById('speed').textContent=speeds[speedIdx].toFixed(1)+'x'}
 document.getElementById('drawToggle').onclick=()=>setDraw(!drawMode)
 document.getElementById('fsBtn').onclick=()=>{const el=wrap;const v=player;const req=el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen||el.mozRequestFullScreen;if(req){req.call(el).catch(()=>{(v.webkitEnterFullscreen||v.webkitEnterFullScreen)?.call(v)})}else{(v.webkitEnterFullscreen||v.webkitEnterFullScreen)?.call(v)}}
 document.getElementById('landHint').onclick=()=>{document.getElementById('hint').textContent='Rotate your phone to landscape for a larger video area.'}
-async function loadVideo(id){const u=await getBlobUrl(id);if(!u)return; if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl); currentObjectUrl=null;} currentObjectUrl=u; currentId=id; player.src=u; player.onloadedmetadata=()=>{setAspectFromVideo()}; player.playbackRate=speeds[speedIdx]; paths=[]; redraw(); await player.play().catch(()=>{})}
+async function loadVideo(id){const u=await getBlobUrl(id);if(!u)return; if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl); currentObjectUrl=null;} currentObjectUrl=u; currentId=id; player.src=u; player.onloadedmetadata=()=>{setAspectFromVideo()}; player.playbackRate=speeds[speedIdx]; paths=[]; redraw(); await player.play().catch(()=>{});}
 document.getElementById('freeSpace').onclick=async()=>{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();const used=(e.usage||0)/1024/1024;const quota=(e.quota||0)/1024/1024;alert('Local storage usage: '+used.toFixed(1)+' MB / '+quota.toFixed(1)+' MB')}else{alert('Storage estimate not supported on this browser.')}}
 refreshLibrary()
