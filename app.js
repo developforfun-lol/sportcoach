@@ -94,11 +94,8 @@ document.getElementById('mkFoul').onclick=()=>addMarker('Foul')
 document.getElementById('mkSub').onclick=()=>addMarker('Sub')
 document.getElementById('mkShot').onclick=()=>addMarker('Shot')
 
-let scoringFor='A';
-const scoringBtn=document.getElementById('scoringTeam')
-scoringBtn.onclick=()=>{scoringFor = (scoringFor==='A'?'B':'A');scoringBtn.textContent='Scoring: '+scoringFor}
 document.getElementById('mkGoal').onclick=()=>{
-  addMarker('Goal'); // record goal event only (no scoring here)
+  addMarker('Goal'); // record goal event only
 }
 
 // custom modal
@@ -107,6 +104,12 @@ const markInput=document.getElementById('markInput')
 function openModal(){document.body.classList.add('modal-open');modal.classList.remove('hidden');setTimeout(()=>markInput.focus(),0)}
 function closeModal(){modal.classList.add('hidden');document.body.classList.remove('modal-open')}
 document.getElementById('mkCustom').onclick=()=>{markInput.value='';openModal()}
+// quick score buttons on Record page
+const scoreA_btn=document.getElementById('scoreA_btn');
+const scoreB_btn=document.getElementById('scoreB_btn');
+if(scoreA_btn) scoreA_btn.onclick=()=>bumpScore('A',+1);
+if(scoreB_btn) scoreB_btn.onclick=()=>bumpScore('B',+1);
+
 document.getElementById('markCancel').onclick=()=>{closeModal()}
 document.getElementById('markOK').onclick=()=>{const v=markInput.value.trim();if(v){addMarker(v.slice(0,24))}closeModal()}
 markInput.addEventListener('keydown',e=>{if(e.key==='Enter'){document.getElementById('markOK').click()}})
