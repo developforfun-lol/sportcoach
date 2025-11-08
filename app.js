@@ -8,9 +8,11 @@ tabs.forEach(b=>b.addEventListener('click',()=>{sections.forEach(s=>s.classList.
 
 let scoreA=0,scoreB=0
 const scoreAEl=document.getElementById('scoreA');const scoreBEl=document.getElementById('scoreB')
+const liveScore=document.getElementById('liveScore')
 function bumpScore(which,delta){
   if(which==='A'){scoreA=Math.max(0,scoreA+delta);scoreAEl.textContent=scoreA}
   else {scoreB=Math.max(0,scoreB+delta);scoreBEl.textContent=scoreB}
+  liveScore.textContent = `${scoreA}:${scoreB}`;
   updateHUDScore();
   recordScoreEventIfRecording();
 }
@@ -30,7 +32,7 @@ document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=f
 document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 function nowGameMs(){return accum+(tRunning?(performance.now()-startTime):0)}
 
-let db;const req=indexedDB.open('sportcoach',19)
+let db;const req=indexedDB.open('sportcoach',20)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result;refreshLibrary()}
 
@@ -50,6 +52,9 @@ function pickType(){const types=['video/mp4;codecs=h264','video/webm;codecs=vp9'
 function recordScoreEventIfRecording(){
   if(!recStartPerf) return;
   const recMs=performance.now()-recStartPerf;
+  // deduplicate consecutive identical entries
+  const last=currentRecordingScoreEvents[currentRecordingScoreEvents.length-1];
+  if(last && last.a===scoreA && last.b===scoreB) return;
   currentRecordingScoreEvents.push({recMs,gameMs:nowGameMs(),a:scoreA,b:scoreB});
 }
 
@@ -79,8 +84,11 @@ function addMarkerWithSnapshot(label){
   const snapshot={a:scoreA,b:scoreB}
   currentRecordingMarkers.push({id:crypto.randomUUID(),label,gameMs:nowGameMs(),recMs,score:snapshot,createdAt:Date.now()});
   recStatus.textContent='Marked: '+label+' @ '+fmtS(Math.floor(recMs/1000));
-  // also ensure we have a score event at this exact time
-  currentRecordingScoreEvents.push({recMs,gameMs:nowGameMs(),a:scoreA,b:scoreB});
+  // ensure a score event exists at this exact time
+  const last=currentRecordingScoreEvents[currentRecordingScoreEvents.length-1];
+  if(!last || last.a!==scoreA || last.b!==scoreB || Math.abs(last.recMs-recMs)>50){
+    currentRecordingScoreEvents.push({recMs,gameMs:nowGameMs(),a:scoreA,b:scoreB});
+  }
 }
 function addMarker(label){ addMarkerWithSnapshot(label) }
 
@@ -88,11 +96,14 @@ document.getElementById('mkFoul').onclick=()=>addMarker('Foul')
 document.getElementById('mkSub').onclick=()=>addMarker('Sub')
 document.getElementById('mkShot').onclick=()=>addMarker('Shot')
 
-// quick Goal: also bumps the selected team's score and records snapshot
 let scoringFor='A';
 const scoringBtn=document.getElementById('scoringTeam')
 scoringBtn.onclick=()=>{scoringFor = (scoringFor==='A'?'B':'A');scoringBtn.textContent='Scoring: '+scoringFor}
-document.getElementById('mkGoal').onclick=()=>{bumpScore(scoringFor,+1);addMarker('Goal')}
+document.getElementById('mkGoal').onclick=()=>{
+  // record marker first (pre-score) or after? use after bump so snapshot shows updated score
+  bumpScore(scoringFor,+1);
+  addMarker('Goal');
+}
 
 // custom modal
 const modal=document.getElementById('markModal')
@@ -196,7 +207,14 @@ function recToGameMs(tMs){
 
 function scoreAtMs(tMs){
   const evs=(currentMeta?.scoreEvents||[]).slice().sort((a,b)=>a.recMs-b.recMs);
-  if(evs.length===0){return {a:scoreA,b:scoreB}} 
+  if(evs.length===0){
+    // derive from marker snapshots as fallback
+    const snaps=(currentMeta?.markers||[]).filter(m=>m.score).map(m=>({recMs:m.recMs,a:m.score.a,b:m.score.b})).sort((a,b)=>a.recMs-b.recMs);
+    if(snaps.length===0) return {a:0,b:0};
+    let cur=snaps[0];
+    for(const s of snaps){ if(s.recMs<=tMs){cur=s}else{break} }
+    return {a:cur.a,b:cur.b};
+  }
   let cur=evs[0];
   for(const e of evs){ if(e.recMs<=tMs){cur=e}else{break} }
   return {a:cur.a,b:cur.b}

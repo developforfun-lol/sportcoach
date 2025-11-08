@@ -31,6 +31,7 @@ ul#videoList{list-style:none;padding:0;margin:14px 0;max-height:260px;overflow:a
 .marker-bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .marker-chip{padding:6px 10px;border:1px solid #2a2a2b;background:#141415;border-radius:999px;color:#ddd;font-size:16px}
 .marker-chip small{opacity:.8;margin-left:6px}
+.liveScore{margin-left:auto;opacity:.9;padding:4px 8px;border:1px solid #333;border-radius:8px;background:#141415}
 footer#ver{opacity:.5;text-align:center;font-size:12px;padding:8px 0}
 @media (max-width:420px){.hudOverlay{display:none} .hudBelow{display:block}} 
 @media (min-width:421px){.hudBelow{display:none}} 
