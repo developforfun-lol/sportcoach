@@ -1,5 +1,5 @@
 const ASSETS=['./','./index.html','./app.js','./style.css','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open('app-v6_2_0').then(c=>c.addAll(ASSETS)))});
+self.addEventListener('install',e=>{e.waitUntil(caches.open('app-v6_2_1').then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
 self.addEventListener('fetch',e=>{
   const url=new URL(e.request.url);
