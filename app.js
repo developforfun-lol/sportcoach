@@ -225,7 +225,7 @@ function updateHUD(){
   const gStr = fmtMS(gMs);
   const sc = scoreAtMs(recMs);
   const scoreStr = `${sc.a}:${sc.b}`;
-  hudRec.textContent = 'REC '+recStr; hudGame.textContent='GAME '+gStr; hudScore.textContent=scoreStr;
+  hudRec.textContent = 'REC '+recStr; hudGame.textContent='GAME '+gStr;
   hudRecBelow.textContent = 'REC '+recStr; hudGameBelow.textContent='GAME '+gStr;
 }
 
