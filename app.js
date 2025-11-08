@@ -9,13 +9,16 @@ document.getElementById('aPlus').onclick=()=>{scoreA++;scoreAEl.textContent=scor
 document.getElementById('aMinus').onclick=()=>{scoreA=Math.max(0,scoreA-1);scoreAEl.textContent=scoreA}
 document.getElementById('bPlus').onclick=()=>{scoreB++;scoreBEl.textContent=scoreB}
 document.getElementById('bMinus').onclick=()=>{scoreB=Math.max(0,scoreB-1);scoreBEl.textContent=scoreB}
-let tInt=null,elapsed=0
+// timer with centiseconds
+let tRunning=false,startTime=0,accum=0,rafId=null
 const tDisp=document.getElementById('timerDisplay')
-document.getElementById('timerStart').onclick=()=>{if(tInt)return;tInt=setInterval(()=>{elapsed++;const m=String(Math.floor(elapsed/60)).padStart(2,'0');const s=String(elapsed%60).padStart(2,'0');tDisp.textContent=m+':'+s},1000)}
-document.getElementById('timerStop').onclick=()=>{clearInterval(tInt);tInt=null}
-document.getElementById('timerReset').onclick=()=>{elapsed=0;tDisp.textContent='00:00';clearInterval(tInt);tInt=null}
+function fmt(ms){const total=Math.floor(ms/10);const cs=String(total%100).padStart(2,'0');const s=Math.floor(total/100)%60;const m=Math.floor(total/6000);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+cs}
+function tick(){const now=performance.now();tDisp.textContent=fmt(accum+(now-startTime));rafId=requestAnimationFrame(tick)}
+document.getElementById('timerStart').onclick=()=>{if(tRunning)return;tRunning=true;startTime=performance.now();rafId=requestAnimationFrame(tick)}
+document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=false;cancelAnimationFrame(rafId);accum+=performance.now()-startTime}
+document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 let db
-const req=indexedDB.open('sportcoach',4)
+const req=indexedDB.open('sportcoach',5)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result}
 let stream,recorder,chunks=[],currentMime=null
@@ -40,9 +43,11 @@ async function getBlobUrl(id){const cache=await caches.open('blobs');const url='
 const player=document.getElementById('player');const canvas=document.getElementById('canvas');const ctx=canvas.getContext('2d')
 let drawing=false;let paths=[];let drawMode=false;let speeds=[0.5,1,1.5,2];let speedIdx=1
 function resize(){const r=document.getElementById('wrap');canvas.width=r.clientWidth;canvas.height=r.clientHeight;redraw()}
-function redraw(){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.lineWidth=3;paths.forEach(p=>{ctx.beginPath();p.forEach((pt,i)=>{if(i===0)ctx.moveTo(pt.x,pt.y);else ctx.lineTo(pt.x,pt.y)});ctx.strokeStyle='#ff4757';ctx.stroke()})}
+function redraw(){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.lineWidth=4;ctx.strokeStyle='#ff4757';paths.forEach(p=>{ctx.beginPath();p.forEach((pt,i)=>{if(i===0)ctx.moveTo(pt.x,pt.y);else ctx.lineTo(pt.x,pt.y)});ctx.stroke()})}
 window.addEventListener('resize',resize);setTimeout(resize,0)
-canvas.style.touchAction='none';canvas.style.userSelect='none'
+// draw toggle: canvas takes events when ON, else pass-through
+function setDraw(on){drawMode=on;document.getElementById('drawToggle').textContent='Draw: '+(on?'On':'Off');canvas.style.pointerEvents=on?'auto':'none'}
+setDraw(false)
 canvas.addEventListener('pointerdown',e=>{if(!drawMode)return;drawing=true;e.preventDefault();paths.push([{x:e.offsetX,y:e.offsetY,t:player.currentTime}])})
 canvas.addEventListener('pointermove',e=>{if(!drawing||!drawMode)return;e.preventDefault();paths[paths.length-1].push({x:e.offsetX,y:e.offsetY,t:player.currentTime});redraw()})
 canvas.addEventListener('pointerup',()=>{drawing=false})
@@ -53,7 +58,13 @@ document.getElementById('playToggle').onclick=()=>{if(player.paused){player.play
 document.getElementById('back5').onclick=()=>{player.currentTime=Math.max(0,player.currentTime-5)}
 document.getElementById('fwd5').onclick=()=>{player.currentTime=Math.min(player.duration||1,player.currentTime+5)}
 document.getElementById('speed').onclick=()=>{speedIdx=(speedIdx+1)%speeds.length;player.playbackRate=speeds[speedIdx];document.getElementById('speed').textContent=speeds[speedIdx].toFixed(1)+'x'}
-document.getElementById('drawToggle').onclick=()=>{drawMode=!drawMode;document.getElementById('drawToggle').textContent='Draw: '+(drawMode?'On':'Off');player.style.pointerEvents=drawMode?'none':'auto'}
-document.getElementById('fsBtn').onclick=()=>{const el=document.getElementById('wrap');if(document.fullscreenElement){document.exitFullscreen?.()}else{(el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen||el.mozRequestFullScreen)?.call(el)}}
+document.getElementById('drawToggle').onclick=()=>setDraw(!drawMode)
+// fullscreen: try container; fallback to iOS video full-screen
+document.getElementById('fsBtn').onclick=()=>{const el=document.getElementById('wrap');const v=player;const req=el.requestFullscreen||el.webkitRequestFullscreen||el.msRequestFullscreen||el.mozRequestFullScreen;if(req){req.call(el).catch(()=>{(v.webkitEnterFullscreen||v.webkitEnterFullScreen)?.call(v)})}else{(v.webkitEnterFullscreen||v.webkitEnterFullScreen)?.call(v)}
+}
+document.getElementById('landHint').onclick=()=>{document.getElementById('hint').textContent='Rotate your phone to landscape for a larger video area.'}
+// load video
 async function loadVideo(id){const u=await getBlobUrl(id);if(!u)return;player.src=u;player.playbackRate=speeds[speedIdx];paths=[];redraw();await player.play().catch(()=>{})}
+// free space
+document.getElementById('freeSpace').onclick=async()=>{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();const used=(e.usage||0)/1024/1024;const quota=(e.quota||0)/1024/1024;alert('Local storage usage: '+used.toFixed(1)+' MB / '+quota.toFixed(1)+' MB')}else{alert('Storage estimate not supported on this browser.')}}
 refreshLibrary()
