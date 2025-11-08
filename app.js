@@ -15,7 +15,7 @@ document.getElementById('timerStart').onclick=()=>{if(tInt)return;tInt=setInterv
 document.getElementById('timerStop').onclick=()=>{clearInterval(tInt);tInt=null}
 document.getElementById('timerReset').onclick=()=>{elapsed=0;tDisp.textContent='00:00';clearInterval(tInt);tInt=null}
 let db
-const req=indexedDB.open('sportcoach',3)
+const req=indexedDB.open('sportcoach',4)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result}
 let stream,recorder,chunks=[],currentMime=null
