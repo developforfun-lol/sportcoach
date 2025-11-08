@@ -59,17 +59,16 @@
 <button id="startRec">Start</button>
 <button id="stopRec" disabled>Stop</button>
 </div>
-<div class="row" id="eventBtns">
-<button class="tagBtn" data-type="Shot">Shot</button>
-<button class="tagBtn" data-type="Pass">Pass</button>
-<button class="tagBtn" data-type="Goal">Goal</button>
-<button class="tagBtn" data-type="Foul">Foul</button>
-<button class="tagBtn" data-type="Run">Run</button>
-<button id="clearEventsRec">Clear Events</button>
-</div>
 <div class="row">
-<span id="recStatus">Idle</span>
+<div class="chipbar">
+<button class="chip" id="mkGoal">Goal</button>
+<button class="chip" id="mkFoul">Foul</button>
+<button class="chip" id="mkSub">Sub</button>
+<button class="chip" id="mkShot">Shot</button>
+<button class="chip" id="mkCustom">Mark</button>
 </div>
+</div>
+<div class="row"><span id="recStatus">Idle</span></div>
 </section>
 <section id="library" class="tab hidden">
 <div class="row">
@@ -83,9 +82,15 @@
 <canvas id="canvas"></canvas>
 </div>
 <div class="row controls-bar">
+<button id="back1">-1s</button>
 <button id="back5">-5s</button>
+<button id="back10">-10s</button>
+<button id="back30">-30s</button>
 <button id="playToggle">Play</button>
+<button id="fwd1">+1s</button>
 <button id="fwd5">+5s</button>
+<button id="fwd10">+10s</button>
+<button id="fwd30">+30s</button>
 <button id="speed">1.0x</button>
 <button id="drawToggle">Draw: Off</button>
 <button id="colorBtn">Color: Red</button>
@@ -94,11 +99,7 @@
 <button id="fsBtn">Fullscreen</button>
 <button id="landHint">Rotate</button>
 </div>
-<div id="eventListWrap" class="row" style="flex-direction:column;align-items:flex-start;">
-<h3>Event List</h3>
-<ul id="eventList" style="list-style:none;padding-left:0;"></ul>
-<button id="clearEventsLib">Clear Events</button>
-</div>
+<div id="markerBar" class="marker-bar"></div>
 <p id="hint" class="hint"></p>
 </div>
 </section>

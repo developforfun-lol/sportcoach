@@ -1,1 +1,1 @@
-// SportCoach v6 core JS placeholder implementing tagging, event list, and speeds
+console.log('v6 placeholder');
