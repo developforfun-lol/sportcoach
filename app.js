@@ -18,7 +18,7 @@ document.getElementById('timerStart').onclick=()=>{if(tRunning)return;tRunning=t
 document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=false;cancelAnimationFrame(rafId);accum+=performance.now()-startTime}
 document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 let db
-const req=indexedDB.open('sportcoach',6)
+const req=indexedDB.open('sportcoach',7)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result}
 let stream,recorder,chunks=[],currentMime=null
@@ -55,7 +55,6 @@ canvas.addEventListener('pointerup',()=>{drawing=false})
 document.getElementById('undo').onclick=()=>{paths.pop();redraw()}
 document.getElementById('clearBtn').onclick=()=>{paths=[];redraw()}
 document.getElementById('colorBtn').onclick=()=>{colorIdx=(colorIdx+1)%colors.length;document.getElementById('colorBtn').textContent='Color: '+(['Red','Yellow','Blue','Green'][colorIdx])}
-document.getElementById('saveAnnot').onclick=()=>{const data=JSON.stringify(paths);const blob=new Blob([data],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='annotations.json';document.body.appendChild(a);a.click();a.remove()}
 document.getElementById('playToggle').onclick=()=>{if(player.paused){player.play()}else{player.pause()}}
 document.getElementById('back5').onclick=()=>{player.currentTime=Math.max(0,player.currentTime-5)}
 document.getElementById('fwd5').onclick=()=>{player.currentTime=Math.min(player.duration||1,player.currentTime+5)}
