@@ -59,6 +59,14 @@
 <button id="startRec">Start</button>
 <button id="stopRec" disabled>Stop</button>
 </div>
+<div class="row" id="eventBtns">
+<button class="tagBtn" data-type="Shot">Shot</button>
+<button class="tagBtn" data-type="Pass">Pass</button>
+<button class="tagBtn" data-type="Goal">Goal</button>
+<button class="tagBtn" data-type="Foul">Foul</button>
+<button class="tagBtn" data-type="Run">Run</button>
+<button id="clearEventsRec">Clear Events</button>
+</div>
 <div class="row">
 <span id="recStatus">Idle</span>
 </div>
@@ -86,11 +94,16 @@
 <button id="fsBtn">Fullscreen</button>
 <button id="landHint">Rotate</button>
 </div>
+<div id="eventListWrap" class="row" style="flex-direction:column;align-items:flex-start;">
+<h3>Event List</h3>
+<ul id="eventList" style="list-style:none;padding-left:0;"></ul>
+<button id="clearEventsLib">Clear Events</button>
+</div>
 <p id="hint" class="hint"></p>
 </div>
 </section>
 </main>
-<footer id="ver">v5.4</footer>
+<footer id="ver">v6.0</footer>
 <script src="app.js"></script>
 </body>
 </html>
