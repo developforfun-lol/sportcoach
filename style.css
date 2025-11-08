@@ -1,1 +1,32 @@
-body{background:#000;color:#fff;font-family:sans-serif;} /* simplified placeholder */
+html,body{margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b0b0c;color:#f5f5f7;font-size:18px}
+*{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#111;border-bottom:1px solid #222}
+h1{font-size:20px;margin:0}
+main{padding:16px}
+nav{display:flex;gap:10px;margin-bottom:14px}
+nav button{padding:10px 14px;border:1px solid #333;background:#1a1a1b;color:#eee;border-radius:10px;font-size:18px}
+.tab.hidden{display:none}
+.team{display:flex;align-items:center;gap:14px;margin:10px 0}
+.team input{background:#141415;border:1px solid #333;border-radius:10px;color:#fff;padding:8px 10px;width:150px;font-size:18px}
+.score{font-size:48px;width:96px;text-align:center}
+.controls button{padding:10px 14px;border:1px solid #333;background:#1a1a1b;color:#eee;border-radius:10px;margin-right:8px}
+.timer{margin-top:14px;display:flex;align-items:center;gap:10px}
+#timerDisplay{font-variant-numeric:tabular-nums;font-size:22px;padding:6px 10px;background:#151516;border:1px solid #333;border-radius:10px}
+.previewWrap{width:100%;max-width:520px;aspect-ratio:16/9;background:#000;border:1px solid #333;border-radius:14px;overflow:hidden}
+#preview,#player{width:100%;height:100%;object-fit:contain}
+.row{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}
+select,button,input{font-size:18px}
+#wrap{position:relative;width:100%;max-width:760px;aspect-ratio:16/9;background:#000;border:1px solid #333;border-radius:14px;overflow:hidden}
+#canvas{position:absolute;left:0;top:0;width:100%;height:100%;z-index:2;touch-action:none}
+#player{position:absolute;left:0;top:0;width:100%;height:100%;z-index:1;background:#000}
+ul#videoList{list-style:none;padding:0;margin:14px 0;max-height:260px;overflow:auto;border:1px solid #333;border-radius:10px}
+#videoList li{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #222}
+#videoList li:last-child{border-bottom:none}
+.controls-bar button{padding:10px 14px;border:1px solid #333;background:#1a1a1b;color:#eee;border-radius:10px}
+.chipbar{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:8px 12px;border:1px solid #333;background:#1a1a1b;border-radius:999px;color:#eee}
+.marker-bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.marker-chip{padding:6px 10px;border:1px solid #2a2a2b;background:#141415;border-radius:999px;color:#ddd;font-size:16px}
+.marker-chip small{opacity:.8;margin-left:6px}
+.hint{opacity:.8;font-size:16px}
+footer#ver{opacity:.5;text-align:center;font-size:12px;padding:8px 0}
