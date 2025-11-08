@@ -98,8 +98,7 @@ let scoringFor='A';
 const scoringBtn=document.getElementById('scoringTeam')
 scoringBtn.onclick=()=>{scoringFor = (scoringFor==='A'?'B':'A');scoringBtn.textContent='Scoring: '+scoringFor}
 document.getElementById('mkGoal').onclick=()=>{
-  bumpScore(scoringFor,+1); // 1) update score (records scoreEvent)
-  addMarker('Goal');        // 2) record goal marker with snapshot
+  addMarker('Goal'); // record goal event only (no scoring here)
 }
 
 // custom modal
