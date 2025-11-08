@@ -15,15 +15,16 @@ document.getElementById('bMinus').onclick=()=>{scoreB=Math.max(0,scoreB-1);score
 
 let tRunning=false,startTime=0,accum=0,rafId=null
 const tDisp=document.getElementById('timerDisplay')
-function fmt(ms){const total=Math.floor(ms/10);const cs=String(total%100).padStart(2,'0');const s=Math.floor(total/100)%60;const m=Math.floor(total/6000);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+cs}
+function fmtCS(ms){const total=Math.floor(ms/10);const cs=String(total%100).padStart(2,'0');const s=Math.floor(total/100)%60;const m=Math.floor(total/6000);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+cs}
+function fmtMS(ms){const m=Math.floor(ms/60000);const s=Math.floor((ms%60000)/1000);const ms3=String(Math.floor(ms%1000)).padStart(3,'0');return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+ms3}
 function fmtS(sec){const s=Math.floor(sec%60);const m=Math.floor(sec/60);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
-function tick(){const now=performance.now();tDisp.textContent=fmt(accum+(now-startTime));rafId=requestAnimationFrame(tick)}
+function tick(){const now=performance.now();tDisp.textContent=fmtCS(accum+(now-startTime));rafId=requestAnimationFrame(tick)}
 document.getElementById('timerStart').onclick=()=>{if(tRunning)return;tRunning=true;startTime=performance.now();rafId=requestAnimationFrame(tick)}
 document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=false;cancelAnimationFrame(rafId);accum+=performance.now()-startTime}
 document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 function nowGameMs(){return accum+(tRunning?(performance.now()-startTime):0)}
 
-let db;const req=indexedDB.open('sportcoach',15)
+let db;const req=indexedDB.open('sportcoach',16)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result;refreshLibrary()}
 
@@ -118,7 +119,8 @@ async function getBlobUrl(id){
 
 let currentId=null,currentObjectUrl=null,currentMeta=null
 const player=document.getElementById('player');const markerBar=document.getElementById('markerBar');const wrap=document.getElementById('wrap')
-const hudRec=document.getElementById('hudRec');const hudGame=document.getElementById('hudGame')
+const hudOverlay=document.getElementById('hudOverlay');const hudRec=document.getElementById('hudRec');const hudGame=document.getElementById('hudGame')
+const hudBelow=document.getElementById('hudBelow');const hudRecBelow=document.getElementById('hudRecBelow');const hudGameBelow=document.getElementById('hudGameBelow')
 
 async function loadVideo(id){
   currentId=id
@@ -138,13 +140,8 @@ async function loadVideo(id){
 function applyVideoAspect(){
   const w=player.videoWidth||16,h=player.videoHeight||9
   wrap.style.aspectRatio=w+' / '+h
-  if(h>w){
-    wrap.style.maxWidth='min(90vw,520px)'
-    wrap.style.height='70vh'
-  }else{
-    wrap.style.maxWidth='760px'
-    wrap.style.height='auto'
-  }
+  if(h>w){wrap.style.maxWidth='min(90vw,520px)';wrap.style.height='70vh'}
+  else {wrap.style.maxWidth='760px';wrap.style.height='auto'}
   resizeCanvas()
 }
 
@@ -153,7 +150,7 @@ function renderMarkers(){
   if(!currentMeta||!currentMeta.markers||currentMeta.markers.length===0){markerBar.textContent='No markers';return}
   currentMeta.markers.forEach(m=>{
     const chip=document.createElement('button');chip.className='marker-chip';chip.textContent=m.label
-    const s=document.createElement('small');s.textContent=' rec '+fmtS(Math.floor(m.recMs/1000))+' | game '+fmt(Math.floor(m.gameMs))
+    const s=document.createElement('small');s.textContent=' rec '+fmtS(Math.floor(m.recMs/1000))+' | game '+fmtS(Math.floor(m.gameMs/1000))
     chip.appendChild(s);chip.onclick=()=>{player.currentTime=Math.max(0,m.recMs/1000-0.3)}
     markerBar.appendChild(chip)
   })
@@ -172,9 +169,11 @@ function recToGameMs(tMs){
 
 function updateHUD(){
   const recMs = (player.currentTime||0)*1000;
-  hudRec.textContent = 'REC '+fmtS(Math.floor(recMs/1000));
+  const recStr = fmtMS(recMs);
   const gMs = recToGameMs(recMs);
-  hudGame.textContent = 'GAME '+fmtS(Math.floor(gMs/1000));
+  const gStr = fmtMS(gMs);
+  hudRec.textContent = 'REC '+recStr; hudGame.textContent='GAME '+gStr;
+  hudRecBelow.textContent = 'REC '+recStr; hudGameBelow.textContent='GAME '+gStr;
 }
 player.addEventListener('timeupdate',updateHUD);
 player.addEventListener('seeked',updateHUD);
@@ -212,8 +211,6 @@ document.getElementById('colorBtn').onclick=()=>{color=color==='red'?'yellow':co
 document.getElementById('undo').onclick=()=>{paths.pop();redraw()}
 document.getElementById('clearBtn').onclick=()=>{paths=[];currentPath=[];redraw()}
 
-document.getElementById('fsBtn').onclick=()=>{const el=document.getElementById('wrap');if(!document.fullscreenElement){el.requestFullscreen?.()}else{document.exitFullscreen?.()}}
-
 async function confirmDelete(id){const ok=window.confirm('Delete this video permanently?');if(!ok)return;await deleteVideo(id)}
 async function deleteVideo(id){
   await new Promise((resolve)=>{const tx=db.transaction('videos','readwrite');const store=tx.objectStore('videos');store.delete(id).onsuccess=()=>resolve()})
@@ -222,8 +219,8 @@ async function deleteVideo(id){
     try{player.pause()}catch(e){}
     if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=null}
     player.removeAttribute('src');player.load();
-    markerBar.innerHTML='';currentId=null;currentMeta=null;
-    document.getElementById('playToggle').textContent='Play';updateHUD()
+    markerBar.innerHTML='';currentId=null;currentMeta=null;updateHUD()
+    document.getElementById('playToggle').textContent='Play'
   }
   refreshLibrary()
 }

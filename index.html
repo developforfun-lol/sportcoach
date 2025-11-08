@@ -83,7 +83,11 @@
 <div id="wrap">
 <video id="player" playsinline></video>
 <canvas id="canvas"></canvas>
+<!-- In-video HUD (preferred) -->
+<div id="hudOverlay" class="hudOverlay"><span id="hudRec">REC 00:00.000</span> • <span id="hudGame">GAME 00:00.000</span></div>
 </div>
+<!-- Below-video HUD (fallback for small screens) -->
+<p id="hudBelow" class="hudBelow"><span id="hudRecBelow">REC 00:00.000</span> • <span id="hudGameBelow">GAME 00:00.000</span></p>
 <div class="row controls-bar">
 <button id="back1">-1s</button>
 <button id="back5">-5s</button>
@@ -99,14 +103,13 @@
 <button id="colorBtn">Color: Red</button>
 <button id="undo">Undo</button>
 <button id="clearBtn">Clear</button>
-<button id="fsBtn">Fullscreen</button>
 </div>
 <div id="markerBar" class="marker-bar"></div>
-<p id="hud" class="hud"><span id="hudRec">REC 00:00</span> • <span id="hudGame">GAME 00:00</span></p>
 </div>
 </section>
 </main>
 
+<!-- Non-blocking custom label modal -->
 <div id="markModal" class="modal hidden">
   <div class="modal-card">
     <h3>Add Mark</h3>
@@ -118,7 +121,7 @@
   </div>
 </div>
 
-<footer id="ver">v6.0.3</footer>
+<footer id="ver">v6.0.4</footer>
 <script src="app.js"></script>
 </body>
 </html>
