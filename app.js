@@ -23,12 +23,12 @@ document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=f
 document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 function nowGameMs(){return accum+(tRunning?(performance.now()-startTime):0)}
 
-let db;const req=indexedDB.open('sportcoach',14)
+let db;const req=indexedDB.open('sportcoach',15)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result;refreshLibrary()}
 
 let stream,recorder,chunks=[],currentMime=null
-let currentRecordingMarkers=[],recStartPerf=0
+let currentRecordingMarkers=[],recStartPerf=0,recBaseGameMs=0
 const preview=document.getElementById('preview')
 const previewWrap=document.getElementById('previewWrap')
 const cameraSel=document.getElementById('camera')
@@ -43,6 +43,7 @@ function pickType(){const types=['video/mp4;codecs=h264','video/webm;codecs=vp9'
 async function startRec(){
   if(!stream)await startPreview();
   currentMime=pickType();chunks=[];currentRecordingMarkers=[];recStartPerf=performance.now();
+  recBaseGameMs=nowGameMs();
   recorder=new MediaRecorder(stream,{mimeType:currentMime||undefined});
   recorder.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data)};
   recorder.onstop=saveBlob;
@@ -69,7 +70,6 @@ document.getElementById('mkFoul').onclick=()=>addMarker('Foul')
 document.getElementById('mkSub').onclick=()=>addMarker('Sub')
 document.getElementById('mkShot').onclick=()=>addMarker('Shot')
 
-// Non-blocking custom mark modal (avoid window.prompt freeze on mobile)
 const modal=document.getElementById('markModal')
 const markInput=document.getElementById('markInput')
 document.getElementById('mkCustom').onclick=()=>{markInput.value='';modal.classList.remove('hidden');markInput.focus()}
@@ -80,7 +80,7 @@ markInput.addEventListener('keydown',e=>{if(e.key==='Enter'){document.getElement
 async function saveBlob(){
   const blob=new Blob(chunks,{type:currentMime||'video/webm'})
   const id=crypto.randomUUID()
-  const meta={id,createdAt:Date.now(),size:blob.size,mime:blob.type,markers:currentRecordingMarkers}
+  const meta={id,createdAt:Date.now(),size:blob.size,mime:blob.type,markers:currentRecordingMarkers,baseGameMs:recBaseGameMs}
   const tx=db.transaction('videos','readwrite');tx.objectStore('videos').put(meta)
   tx.oncomplete=()=>{caches.open('blobs').then(c=>{const url='./blob/'+id;const r=new Response(blob,{headers:{'Content-Type':blob.type}});c.put(url,r).then(()=>{refreshLibrary()})})}
 }
@@ -118,6 +118,8 @@ async function getBlobUrl(id){
 
 let currentId=null,currentObjectUrl=null,currentMeta=null
 const player=document.getElementById('player');const markerBar=document.getElementById('markerBar');const wrap=document.getElementById('wrap')
+const hudRec=document.getElementById('hudRec');const hudGame=document.getElementById('hudGame')
+
 async function loadVideo(id){
   currentId=id
   const tx=db.transaction('videos','readonly')
@@ -129,7 +131,7 @@ async function loadVideo(id){
     await new Promise(res=>{player.onloadedmetadata=()=>{applyVideoAspect();res()}})
     await player.play().catch(()=>{})
     document.getElementById('playToggle').textContent='Pause'
-    renderMarkers()
+    renderMarkers();updateHUD()
   }
 }
 
@@ -156,6 +158,27 @@ function renderMarkers(){
     markerBar.appendChild(chip)
   })
 }
+
+function recToGameMs(tMs){
+  if(currentMeta?.baseGameMs!=null){return currentMeta.baseGameMs + tMs}
+  if(currentMeta?.markers?.length){
+    const arr=currentMeta.markers.slice().sort((a,b)=>a.recMs-b.recMs);
+    let offset = arr[0].gameMs - arr[0].recMs;
+    for(const m of arr){ if(m.recMs<=tMs) offset = m.gameMs - m.recMs; else break }
+    return tMs + offset;
+  }
+  return tMs;
+}
+
+function updateHUD(){
+  const recMs = (player.currentTime||0)*1000;
+  hudRec.textContent = 'REC '+fmtS(Math.floor(recMs/1000));
+  const gMs = recToGameMs(recMs);
+  hudGame.textContent = 'GAME '+fmtS(Math.floor(gMs/1000));
+}
+player.addEventListener('timeupdate',updateHUD);
+player.addEventListener('seeked',updateHUD);
+player.addEventListener('loadedmetadata',updateHUD);
 
 function seekBy(sec){player.currentTime=Math.max(0,player.currentTime+sec)}
 document.getElementById('back1').onclick=()=>seekBy(-1)
@@ -200,7 +223,7 @@ async function deleteVideo(id){
     if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=null}
     player.removeAttribute('src');player.load();
     markerBar.innerHTML='';currentId=null;currentMeta=null;
-    document.getElementById('playToggle').textContent='Play'
+    document.getElementById('playToggle').textContent='Play';updateHUD()
   }
   refreshLibrary()
 }
