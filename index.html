@@ -83,11 +83,9 @@
 <div id="wrap">
 <video id="player" playsinline></video>
 <canvas id="canvas"></canvas>
-<!-- In-video HUD (preferred) -->
-<div id="hudOverlay" class="hudOverlay"><span id="hudRec">REC 00:00.000</span> • <span id="hudGame">GAME 00:00.000</span></div>
+<div id="hudOverlay" class="hudOverlay"><span id="hudRec">REC 00:00.000</span> • <span id="hudGame">GAME 00:00.000</span> • <span id="hudScore">0:0</span></div>
 </div>
-<!-- Below-video HUD (fallback for small screens) -->
-<p id="hudBelow" class="hudBelow"><span id="hudRecBelow">REC 00:00.000</span> • <span id="hudGameBelow">GAME 00:00.000</span></p>
+<p id="hudBelow" class="hudBelow"><span id="hudRecBelow">REC 00:00.000</span> • <span id="hudGameBelow">GAME 00:00.000</span> • <span id="hudScoreBelow">0:0</span></p>
 <div class="row controls-bar">
 <button id="back1">-1s</button>
 <button id="back5">-5s</button>
@@ -110,9 +108,9 @@
 </main>
 
 <!-- Non-blocking custom label modal -->
-<div id="markModal" class="modal hidden">
+<div id="markModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="markTitle">
   <div class="modal-card">
-    <h3>Add Mark</h3>
+    <h3 id="markTitle">Add Mark</h3>
     <input id="markInput" maxlength="24" placeholder="Label (max 24)">
     <div class="modal-actions">
       <button id="markCancel">Cancel</button>
@@ -121,7 +119,7 @@
   </div>
 </div>
 
-<footer id="ver">v6.0.4</footer>
+<footer id="ver">v6.0.5</footer>
 <script src="app.js"></script>
 </body>
 </html>

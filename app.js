@@ -8,10 +8,10 @@ tabs.forEach(b=>b.addEventListener('click',()=>{sections.forEach(s=>s.classList.
 
 let scoreA=0,scoreB=0
 const scoreAEl=document.getElementById('scoreA');const scoreBEl=document.getElementById('scoreB')
-document.getElementById('aPlus').onclick=()=>{scoreA++;scoreAEl.textContent=scoreA}
-document.getElementById('aMinus').onclick=()=>{scoreA=Math.max(0,scoreA-1);scoreAEl.textContent=scoreA}
-document.getElementById('bPlus').onclick=()=>{scoreB++;scoreBEl.textContent=scoreB}
-document.getElementById('bMinus').onclick=()=>{scoreB=Math.max(0,scoreB-1);scoreBEl.textContent=scoreB}
+document.getElementById('aPlus').onclick=()=>{scoreA++;scoreAEl.textContent=scoreA;updateHUDScore()}
+document.getElementById('aMinus').onclick=()=>{scoreA=Math.max(0,scoreA-1);scoreAEl.textContent=scoreA;updateHUDScore()}
+document.getElementById('bPlus').onclick=()=>{scoreB++;scoreBEl.textContent=scoreB;updateHUDScore()}
+document.getElementById('bMinus').onclick=()=>{scoreB=Math.max(0,scoreB-1);scoreBEl.textContent=scoreB;updateHUDScore()}
 
 let tRunning=false,startTime=0,accum=0,rafId=null
 const tDisp=document.getElementById('timerDisplay')
@@ -24,7 +24,7 @@ document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=f
 document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 function nowGameMs(){return accum+(tRunning?(performance.now()-startTime):0)}
 
-let db;const req=indexedDB.open('sportcoach',16)
+let db;const req=indexedDB.open('sportcoach',17)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result;refreshLibrary()}
 
@@ -73,9 +73,11 @@ document.getElementById('mkShot').onclick=()=>addMarker('Shot')
 
 const modal=document.getElementById('markModal')
 const markInput=document.getElementById('markInput')
-document.getElementById('mkCustom').onclick=()=>{markInput.value='';modal.classList.remove('hidden');markInput.focus()}
-document.getElementById('markCancel').onclick=()=>{modal.classList.add('hidden')}
-document.getElementById('markOK').onclick=()=>{const v=markInput.value.trim();if(v){addMarker(v.slice(0,24))}modal.classList.add('hidden')}
+function openModal(){document.body.classList.add('modal-open');modal.classList.remove('hidden');setTimeout(()=>markInput.focus(),0)}
+function closeModal(){modal.classList.add('hidden');document.body.classList.remove('modal-open')}
+document.getElementById('mkCustom').onclick=()=>{markInput.value='';openModal()}
+document.getElementById('markCancel').onclick=()=>{closeModal()}
+document.getElementById('markOK').onclick=()=>{const v=markInput.value.trim();if(v){addMarker(v.slice(0,24))}closeModal()}
 markInput.addEventListener('keydown',e=>{if(e.key==='Enter'){document.getElementById('markOK').click()}})
 
 async function saveBlob(){
@@ -119,8 +121,8 @@ async function getBlobUrl(id){
 
 let currentId=null,currentObjectUrl=null,currentMeta=null
 const player=document.getElementById('player');const markerBar=document.getElementById('markerBar');const wrap=document.getElementById('wrap')
-const hudOverlay=document.getElementById('hudOverlay');const hudRec=document.getElementById('hudRec');const hudGame=document.getElementById('hudGame')
-const hudBelow=document.getElementById('hudBelow');const hudRecBelow=document.getElementById('hudRecBelow');const hudGameBelow=document.getElementById('hudGameBelow')
+const hudOverlay=document.getElementById('hudOverlay');const hudRec=document.getElementById('hudRec');const hudGame=document.getElementById('hudGame');const hudScore=document.getElementById('hudScore')
+const hudBelow=document.getElementById('hudBelow');const hudRecBelow=document.getElementById('hudRecBelow');const hudGameBelow=document.getElementById('hudGameBelow');const hudScoreBelow=document.getElementById('hudScoreBelow')
 
 async function loadVideo(id){
   currentId=id
@@ -133,7 +135,7 @@ async function loadVideo(id){
     await new Promise(res=>{player.onloadedmetadata=()=>{applyVideoAspect();res()}})
     await player.play().catch(()=>{})
     document.getElementById('playToggle').textContent='Pause'
-    renderMarkers();updateHUD()
+    renderMarkers();updateHUD(true)
   }
 }
 
@@ -167,7 +169,10 @@ function recToGameMs(tMs){
   return tMs;
 }
 
-function updateHUD(){
+function updateHUD(updateScoreOnly=false){
+  const scoreStr = `${scoreA}:${scoreB}`
+  hudScore.textContent=scoreStr; hudScoreBelow.textContent=scoreStr;
+  if(updateScoreOnly) return;
   const recMs = (player.currentTime||0)*1000;
   const recStr = fmtMS(recMs);
   const gMs = recToGameMs(recMs);
@@ -175,9 +180,11 @@ function updateHUD(){
   hudRec.textContent = 'REC '+recStr; hudGame.textContent='GAME '+gStr;
   hudRecBelow.textContent = 'REC '+recStr; hudGameBelow.textContent='GAME '+gStr;
 }
-player.addEventListener('timeupdate',updateHUD);
-player.addEventListener('seeked',updateHUD);
-player.addEventListener('loadedmetadata',updateHUD);
+function updateHUDScore(){updateHUD(true)}
+
+player.addEventListener('timeupdate',()=>updateHUD(false));
+player.addEventListener('seeked',()=>updateHUD(false));
+player.addEventListener('loadedmetadata',()=>updateHUD(false));
 
 function seekBy(sec){player.currentTime=Math.max(0,player.currentTime+sec)}
 document.getElementById('back1').onclick=()=>seekBy(-1)
@@ -189,9 +196,6 @@ document.getElementById('fwd5').onclick=()=>seekBy(5)
 document.getElementById('fwd10').onclick=()=>seekBy(10)
 document.getElementById('fwd30').onclick=()=>seekBy(30)
 document.getElementById('playToggle').onclick=()=>{if(player.paused){player.play();document.getElementById('playToggle').textContent='Pause'}else{player.pause();document.getElementById('playToggle').textContent='Play'}}
-
-const speeds=[0.25,0.5,0.75,1,1.25,1.5,1.75,2,2.5,3];let speedIdx=3
-document.getElementById('speed').onclick=()=>{speedIdx=(speedIdx+1)%speeds.length;player.playbackRate=speeds[speedIdx];document.getElementById('speed').textContent=speeds[speedIdx].toFixed(2)+'x'}
 
 const canvas=document.getElementById('canvas');const ctx=canvas.getContext('2d')
 let drawing=false,paths=[],currentPath=[],color='red',drawEnabled=false
