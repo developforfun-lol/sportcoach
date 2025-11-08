@@ -14,6 +14,7 @@ nav button{padding:10px 14px;border:1px solid #333;background:#1a1a1b;color:#eee
 .timer{margin-top:14px;display:flex;align-items:center;gap:10px}
 #timerDisplay{font-variant-numeric:tabular-nums;font-size:22px;padding:6px 10px;background:#151516;border:1px solid #333;border-radius:10px}
 .previewWrap{width:100%;max-width:520px;aspect-ratio:16/9;background:#000;border:1px solid #333;border-radius:14px;overflow:hidden}
+.previewWrap.compact{max-width:440px}
 #preview,#player{width:100%;height:100%;object-fit:contain}
 .row{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}
 select,button,input{font-size:18px}
@@ -31,8 +32,11 @@ ul#videoList{list-style:none;padding:0;margin:14px 0;max-height:260px;overflow:a
 .marker-bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .marker-chip{padding:6px 10px;border:1px solid #2a2a2b;background:#141415;border-radius:999px;color:#ddd;font-size:16px}
 .marker-chip small{opacity:.8;margin-left:6px}
-.liveScore{margin-left:auto;opacity:.9;padding:4px 8px;border:1px solid #333;border-radius:8px;background:#141415}
+.capture-grid{display:grid;grid-template-columns:minmax(280px,440px) 1fr;gap:16px;align-items:start}
+.cap-right .teams{display:flex;flex-direction:column;gap:8px}
+.chip.small{padding:6px 10px;font-size:16px}
 footer#ver{opacity:.5;text-align:center;font-size:12px;padding:8px 0}
+@media (max-width:780px){.capture-grid{grid-template-columns:1fr}.previewWrap.compact{max-width:100%}}
 @media (max-width:420px){.hudOverlay{display:none} .hudBelow{display:block}} 
 @media (min-width:421px){.hudBelow{display:none}} 
 .modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:99999}

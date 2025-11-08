@@ -15,101 +15,99 @@
 </header>
 <main>
 <nav>
-<button data-tab="score">Score</button>
-<button data-tab="record">Record</button>
+<button data-tab="capture">Capture</button>
 <button data-tab="library">Library</button>
 </nav>
-
-<section id="score" class="tab">
-<div class="team">
-<input id="teamAName" value="Team A">
-<div class="score" id="scoreA">0</div>
-<div class="controls">
-<button id="aPlus">+1</button>
-<button id="aMinus">-1</button>
-</div>
-</div>
-<div class="team">
-<input id="teamBName" value="Team B">
-<div class="score" id="scoreB">0</div>
-<div class="controls">
-<button id="bPlus">+1</button>
-<button id="bMinus">-1</button>
-</div>
-</div>
-<div class="timer">
-<span id="timerDisplay">00:00.00</span>
-<button id="timerStart">Start</button>
-<button id="timerStop">Stop</button>
-<button id="timerReset">Reset</button>
+<section id="capture" class="tab">
+<div class="capture-grid">
+  <div class="cap-left">
+    <div id="previewWrap" class="previewWrap compact">
+      <video id="preview" playsinline autoplay muted></video>
+    </div>
+    <div class="row">
+      <select id="camera"></select>
+      <select id="resolution">
+        <option value="640x480">640x480</option>
+        <option value="1280x720" selected>1280x720</option>
+        <option value="1920x1080">1920x1080</option>
+      </select>
+    </div>
+    <div class="row">
+      <button id="startRec">Start</button>
+      <button id="stopRec" disabled>Stop</button>
+      <span id="recStatus">Idle</span>
+    </div>
+    <div class="row chipbar">
+      <button class="chip" id="mkGoal">Goal</button>
+      <button class="chip" id="mkFoul">Foul</button>
+      <button class="chip" id="mkSub">Sub</button>
+      <button class="chip" id="mkShot">Shot</button>
+      <button class="chip" id="mkCustom">Mark</button>
+    </div>
+  </div>
+  <div class="cap-right">
+    <div class="teams">
+      <div class="team">
+        <input id="teamAName" value="Team A">
+        <div class="score" id="scoreA">0</div>
+        <div class="controls">
+          <button id="aPlus">+1</button>
+          <button id="aMinus">-1</button>
+          <button id="scoreA_btn" class="chip small">Score A +1</button>
+        </div>
+      </div>
+      <div class="team">
+        <input id="teamBName" value="Team B">
+        <div class="score" id="scoreB">0</div>
+        <div class="controls">
+          <button id="bPlus">+1</button>
+          <button id="bMinus">-1</button>
+          <button id="scoreB_btn" class="chip small">Score B +1</button>
+        </div>
+      </div>
+    </div>
+    <div class="timer">
+      <span id="timerDisplay">00:00.00</span>
+      <button id="timerStart">Start</button>
+      <button id="timerStop">Stop</button>
+      <button id="timerReset">Reset</button>
+    </div>
+  </div>
 </div>
 </section>
-
-<section id="record" class="tab hidden">
-<div id="previewWrap" class="previewWrap">
-<video id="preview" playsinline autoplay muted></video>
-</div>
-<div class="row">
-<select id="camera"></select>
-<select id="resolution">
-<option value="640x480">640x480</option>
-<option value="1280x720" selected>1280x720</option>
-<option value="1920x1080">1920x1080</option>
-</select>
-</div>
-<div class="row">
-<button id="startRec">Start</button>
-<button id="stopRec" disabled>Stop</button>
-</div>
-<div class="row">
-<div class="chipbar">
-<button class="chip" id="mkGoal">Goal</button>
-<button class="chip" id="mkFoul">Foul</button>
-<button class="chip" id="mkSub">Sub</button>
-<button class="chip" id="mkShot">Shot</button>
-<button class="chip" id="mkCustom">Mark</button>
-</div>
-<button id="scoreA_btn" class="chip" title="Add 1 to Team A">Score A +1</button>
-<button id="scoreB_btn" class="chip" title="Add 1 to Team B">Score B +1</button>
-<span id="liveScore" class="liveScore" title="Live score on Record page">0:0</span>
-</div>
-<div class="row"><span id="recStatus">Idle</span></div>
-</section>
-
 <section id="library" class="tab hidden">
 <div class="row">
-<button id="refreshLib">Refresh</button>
-<button id="freeSpace">Free Space</button>
+  <button id="refreshLib">Refresh</button>
+  <button id="freeSpace">Free Space</button>
 </div>
 <ul id="videoList"></ul>
 <div id="playerWrap">
-<div id="wrap">
-<video id="player" playsinline></video>
-<canvas id="canvas"></canvas>
-<div id="hudOverlay" class="hudOverlay"><span id="hudRec">REC 00:00.000</span> • <span id="hudGame">GAME 00:00.000</span></div>
-</div>
-<p id="hudBelow" class="hudBelow"><span id="hudRecBelow">REC 00:00.000</span> • <span id="hudGameBelow">GAME 00:00.000</span></p>
-<div class="row controls-bar">
-<button id="back1">-1s</button>
-<button id="back5">-5s</button>
-<button id="back10">-10s</button>
-<button id="back30">-30s</button>
-<button id="playToggle">Play</button>
-<button id="fwd1">+1s</button>
-<button id="fwd5">+5s</button>
-<button id="fwd10">+10s</button>
-<button id="fwd30">+30s</button>
-<button id="speed">1.0x</button>
-<button id="drawToggle">Draw: Off</button>
-<button id="colorBtn">Color: Red</button>
-<button id="undo">Undo</button>
-<button id="clearBtn">Clear</button>
-</div>
-<div id="markerBar" class="marker-bar"></div>
+  <div id="wrap">
+    <video id="player" playsinline></video>
+    <canvas id="canvas"></canvas>
+    <div id="hudOverlay" class="hudOverlay"><span id="hudRec">REC 00:00.000</span> • <span id="hudGame">GAME 00:00.000</span></div>
+  </div>
+  <p id="hudBelow" class="hudBelow"><span id="hudRecBelow">REC 00:00.000</span> • <span id="hudGameBelow">GAME 00:00.000</span></p>
+  <div class="row controls-bar">
+    <button id="back1">-1s</button>
+    <button id="back5">-5s</button>
+    <button id="back10">-10s</button>
+    <button id="back30">-30s</button>
+    <button id="playToggle">Play</button>
+    <button id="fwd1">+1s</button>
+    <button id="fwd5">+5s</button>
+    <button id="fwd10">+10s</button>
+    <button id="fwd30">+30s</button>
+    <button id="speed">1.0x</button>
+    <button id="drawToggle">Draw: Off</button>
+    <button id="colorBtn">Color: Red</button>
+    <button id="undo">Undo</button>
+    <button id="clearBtn">Clear</button>
+  </div>
+  <div id="markerBar" class="marker-bar"></div>
 </div>
 </section>
 </main>
-
 <div id="markModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="markTitle">
   <div class="modal-card">
     <h3 id="markTitle">Add Mark</h3>
@@ -120,8 +118,7 @@
     </div>
   </div>
 </div>
-
-<footer id="ver">v6.1.2</footer>
+<footer id="ver">v6.2.0</footer>
 <script src="app.js"></script>
 </body>
 </html>
