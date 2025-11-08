@@ -8,10 +8,16 @@ tabs.forEach(b=>b.addEventListener('click',()=>{sections.forEach(s=>s.classList.
 
 let scoreA=0,scoreB=0
 const scoreAEl=document.getElementById('scoreA');const scoreBEl=document.getElementById('scoreB')
-document.getElementById('aPlus').onclick=()=>{scoreA++;scoreAEl.textContent=scoreA;updateHUDScore()}
-document.getElementById('aMinus').onclick=()=>{scoreA=Math.max(0,scoreA-1);scoreAEl.textContent=scoreA;updateHUDScore()}
-document.getElementById('bPlus').onclick=()=>{scoreB++;scoreBEl.textContent=scoreB;updateHUDScore()}
-document.getElementById('bMinus').onclick=()=>{scoreB=Math.max(0,scoreB-1);scoreBEl.textContent=scoreB;updateHUDScore()}
+function bumpScore(which,delta){
+  if(which==='A'){scoreA=Math.max(0,scoreA+delta);scoreAEl.textContent=scoreA}
+  else {scoreB=Math.max(0,scoreB+delta);scoreBEl.textContent=scoreB}
+  updateHUDScore();
+  recordScoreEventIfRecording();
+}
+document.getElementById('aPlus').onclick=()=>bumpScore('A',+1)
+document.getElementById('aMinus').onclick=()=>bumpScore('A',-1)
+document.getElementById('bPlus').onclick=()=>bumpScore('B',+1)
+document.getElementById('bMinus').onclick=()=>bumpScore('B',-1)
 
 let tRunning=false,startTime=0,accum=0,rafId=null
 const tDisp=document.getElementById('timerDisplay')
@@ -24,12 +30,12 @@ document.getElementById('timerStop').onclick=()=>{if(!tRunning)return;tRunning=f
 document.getElementById('timerReset').onclick=()=>{tRunning=false;cancelAnimationFrame(rafId);accum=0;tDisp.textContent='00:00.00'}
 function nowGameMs(){return accum+(tRunning?(performance.now()-startTime):0)}
 
-let db;const req=indexedDB.open('sportcoach',17)
+let db;const req=indexedDB.open('sportcoach',18)
 req.onupgradeneeded=e=>{db=e.target.result;if(!db.objectStoreNames.contains('videos'))db.createObjectStore('videos',{keyPath:'id'})}
 req.onsuccess=e=>{db=e.target.result;refreshLibrary()}
 
 let stream,recorder,chunks=[],currentMime=null
-let currentRecordingMarkers=[],recStartPerf=0,recBaseGameMs=0
+let currentRecordingMarkers=[],currentRecordingScoreEvents=[],recStartPerf=0,recBaseGameMs=0
 const preview=document.getElementById('preview')
 const previewWrap=document.getElementById('previewWrap')
 const cameraSel=document.getElementById('camera')
@@ -41,10 +47,18 @@ function setAspectFromPreview(){if(!preview.videoWidth||!preview.videoHeight)ret
 async function startPreview(){const res=resSel.value.split('x').map(Number);const c={video:{width:{ideal:res[0]},height:{ideal:res[1]},facingMode:'environment'},audio:true};if(cameraSel.value)c.video.deviceId={exact:cameraSel.value};stream=await navigator.mediaDevices.getUserMedia(c);preview.srcObject=stream;preview.onloadedmetadata=()=>{setAspectFromPreview();preview.play?.()}}
 function pickType(){const types=['video/mp4;codecs=h264','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];for(const t of types){if(MediaRecorder.isTypeSupported(t)){return t}}return ''}
 
+function recordScoreEventIfRecording(){
+  if(!recStartPerf) return;
+  const recMs=performance.now()-recStartPerf;
+  currentRecordingScoreEvents.push({recMs,gameMs:nowGameMs(),a:scoreA,b:scoreB});
+}
+
 async function startRec(){
   if(!stream)await startPreview();
-  currentMime=pickType();chunks=[];currentRecordingMarkers=[];recStartPerf=performance.now();
+  currentMime=pickType();chunks=[];currentRecordingMarkers=[];currentRecordingScoreEvents=[];recStartPerf=performance.now();
   recBaseGameMs=nowGameMs();
+  // seed initial score snapshot
+  currentRecordingScoreEvents.push({recMs:0,gameMs:recBaseGameMs,a:scoreA,b:scoreB});
   recorder=new MediaRecorder(stream,{mimeType:currentMime||undefined});
   recorder.ondataavailable=e=>{if(e.data&&e.data.size>0)chunks.push(e.data)};
   recorder.onstop=saveBlob;
@@ -83,7 +97,7 @@ markInput.addEventListener('keydown',e=>{if(e.key==='Enter'){document.getElement
 async function saveBlob(){
   const blob=new Blob(chunks,{type:currentMime||'video/webm'})
   const id=crypto.randomUUID()
-  const meta={id,createdAt:Date.now(),size:blob.size,mime:blob.type,markers:currentRecordingMarkers,baseGameMs:recBaseGameMs}
+  const meta={id,createdAt:Date.now(),size:blob.size,mime:blob.type,markers:currentRecordingMarkers,baseGameMs:recBaseGameMs,scoreEvents:currentRecordingScoreEvents}
   const tx=db.transaction('videos','readwrite');tx.objectStore('videos').put(meta)
   tx.oncomplete=()=>{caches.open('blobs').then(c=>{const url='./blob/'+id;const r=new Response(blob,{headers:{'Content-Type':blob.type}});c.put(url,r).then(()=>{refreshLibrary()})})}
 }
@@ -135,7 +149,7 @@ async function loadVideo(id){
     await new Promise(res=>{player.onloadedmetadata=()=>{applyVideoAspect();res()}})
     await player.play().catch(()=>{})
     document.getElementById('playToggle').textContent='Pause'
-    renderMarkers();updateHUD(true)
+    renderMarkers();applyDesiredSpeed();updateHUD()
   }
 }
 
@@ -169,22 +183,28 @@ function recToGameMs(tMs){
   return tMs;
 }
 
-function updateHUD(updateScoreOnly=false){
-  const scoreStr = `${scoreA}:${scoreB}`
-  hudScore.textContent=scoreStr; hudScoreBelow.textContent=scoreStr;
-  if(updateScoreOnly) return;
+function scoreAtMs(tMs){
+  const evs=(currentMeta?.scoreEvents||[]).slice().sort((a,b)=>a.recMs-b.recMs);
+  if(evs.length===0){return {a:scoreA,b:scoreB}} // fallback to current
+  let cur=evs[0];
+  for(const e of evs){ if(e.recMs<=tMs){cur=e}else{break} }
+  return {a:cur.a,b:cur.b}
+}
+
+function updateHUD(){
   const recMs = (player.currentTime||0)*1000;
   const recStr = fmtMS(recMs);
   const gMs = recToGameMs(recMs);
   const gStr = fmtMS(gMs);
-  hudRec.textContent = 'REC '+recStr; hudGame.textContent='GAME '+gStr;
-  hudRecBelow.textContent = 'REC '+recStr; hudGameBelow.textContent='GAME '+gStr;
+  const sc = scoreAtMs(recMs);
+  const scoreStr = `${sc.a}:${sc.b}`;
+  hudRec.textContent = 'REC '+recStr; hudGame.textContent='GAME '+gStr; hudScore.textContent=scoreStr;
+  hudRecBelow.textContent = 'REC '+recStr; hudGameBelow.textContent='GAME '+gStr; hudScoreBelow.textContent=scoreStr;
 }
-function updateHUDScore(){updateHUD(true)}
 
-player.addEventListener('timeupdate',()=>updateHUD(false));
-player.addEventListener('seeked',()=>updateHUD(false));
-player.addEventListener('loadedmetadata',()=>updateHUD(false));
+player.addEventListener('timeupdate',updateHUD);
+player.addEventListener('seeked',updateHUD);
+player.addEventListener('loadedmetadata',updateHUD);
 
 function seekBy(sec){player.currentTime=Math.max(0,player.currentTime+sec)}
 document.getElementById('back1').onclick=()=>seekBy(-1)
@@ -196,6 +216,18 @@ document.getElementById('fwd5').onclick=()=>seekBy(5)
 document.getElementById('fwd10').onclick=()=>seekBy(10)
 document.getElementById('fwd30').onclick=()=>seekBy(30)
 document.getElementById('playToggle').onclick=()=>{if(player.paused){player.play();document.getElementById('playToggle').textContent='Pause'}else{player.pause();document.getElementById('playToggle').textContent='Play'}}
+
+// Robust speed control
+const speeds=[0.25,0.5,0.75,1,1.25,1.5,1.75,2,2.5,3];let speedIdx=3;let desiredRate=speeds[speedIdx];
+function applyDesiredSpeed(){player.playbackRate=desiredRate}
+document.getElementById('speed').onclick=()=>{
+  speedIdx=(speedIdx+1)%speeds.length;
+  desiredRate=speeds[speedIdx];
+  applyDesiredSpeed();
+  document.getElementById('speed').textContent=speeds[speedIdx].toFixed(2)+'x';
+}
+player.addEventListener('play',applyDesiredSpeed);
+player.addEventListener('loadedmetadata',applyDesiredSpeed);
 
 const canvas=document.getElementById('canvas');const ctx=canvas.getContext('2d')
 let drawing=false,paths=[],currentPath=[],color='red',drawEnabled=false
